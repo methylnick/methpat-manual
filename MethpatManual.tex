@@ -1,0 +1,198 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
+%\geometry{landscape}                % Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\usepackage[colorlinks=true,linkcolor=blue]{hyperref}
+\usepackage{rotfloat}
+
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+\DeclareTextFontCommand{\emph}{\em}
+
+\title{Methpat Manual}
+\author{Nicholas C. Wong and Bernard J. Pope\\
+		Version 0.2 \\
+}
+
+\date{\today}                              % Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\newpage
+
+\section{Requirements}
+\begin{itemize}
+\item{Whole genome bisulfite short read sequencing data (WGBS), or Reduced Representation Bisulfite Sequencing (RRBS), or Bisulfite Amplicon Sequencing}
+\item{Bismark v0.12.2 and it's dependencies (bwa  v0.7.5a-r405)}
+\item{Perl 2.7 or above and pip}
+\item{Methpat and it's dependencies \href{https://github.com/bjpop/methpat}{https://github.com/bjpop/methpat}}
+\item{For visualisation of html files, current versions of Firefox or Chrome}
+\end{itemize}
+
+\section{Installation instructions}
+Goto GitHub site for further detail and instructions. \href{https://github.com/bjpop/methpat}{https://github.com/bjpop/methpat}
+
+or
+
+Download the current master from git hub with the following command as Administrator (or Root).
+\begin{verbatim}
+pip install git+https://github.com/bjpop/methpat.git
+\end{verbatim}
+
+\section{Usage}
+Methpat was designed to take output files from Bismark and summarise DNA methylation patterns into a text file format that is amenable to downstream statistical analysis.
+The premise has been that the allelic DNA methylation patterns are as important biologically as the level of DNA methylation measured. 
+
+\begin{verbatim}
+usage: methpat [-h] [--dump_reads FILE] [--count_thresh THRESH] --amplicons
+               AMPLICONS_FILE --logfile FILENAME --html FILENAME
+               [--webassets {package,local,online}]
+               BISMARK_FILE
+               
+positional arguments:
+BISMARK_FILE          input bismark file
+
+optional arguments:
+  -h, --help            					show this help message and exit
+  --dump_reads FILE     				dump the read methylation information to FILE
+  --count_thresh THRESH				only display methylation patterns with at least THRESH
+                        						number of matching reads
+  --amplicons AMPLICONS_FILE		filename of tab-delimited BED format text file containing 
+  								amplicon/Region of Interest coordinates
+  --logfile FILENAME    				log progress in FILENAME
+  --html FILENAME       				save visualisation in html FILENAME
+  --webassets {package, local, online}	define location of D3.js libraries. 
+\end{verbatim}
+Package defines the required library files are in a common directory and related to Methpat.
+Local defines the required library files are manually placed into the same directory as the html file.
+Online defines the required library files are found on the internet (requires internet connection).
+
+\subsection{Amplicons File Definintion}
+The amplicons or regions of interest are defined by this tab-delimited text file. The order of regions listed in this file will correspond to the order of display in the html file generated.
+The file requires 7 columns which define:
+
+\begin{enumerate}
+\item{chromosome}
+\item{start coordinate of amplicon/region of interest}
+\item{end coordinate of amplicon/region of interest}
+\item{name of amplicon/region of interest}
+\item{size of amplicon/region of interest}
+\item{length of forward PCR primer of amplicon/region of interest, number of bp to ignore from the start}
+\item{length of reverse PCR primer of amplicon/region of interest, number of bp to ignore from the end}
+\end{enumerate}
+
+See DemoData for a working example. 
+
+\section{Worked Example}
+Run Bismark as per instructions to prepare the reference genome as outlined in bismark manual.
+
+Run Bismark to align raw read files (fastq) as below with no mismatches:
+\begin{verbatim}
+bismark -n 0 -q -o <nameOfOutPutDirectory> --bam --ambiguous 
+	--chunkmbs 10204 --non_directional /path/to/reference/genome <fastq.file>
+\end{verbatim}
+
+Run bismark\_methylation\_extractor to create an output text file containing read DNA methylation pattern information:
+\begin{verbatim}
+bismark_methylation_extractor -s <bismarkAlignedFileName.bam>
+\end{verbatim}
+
+This creates a series of text files prefixed with the methylation orientation and reference genome strand data was extracted from. 
+For the purposes here, the files prefixed with CpG are then processed with methpat.
+
+In the directory containing the bismark output files run:
+\begin{verbatim}
+for i in `ls CpG*`
+do j=`echo ${i} | sed 's;CpG\_OT\_;;g' | sed 's;_L001_R1_001fastq_bismark.txt;;g'`
+methpat --dump_reads ${j}.dump --count_thresh 1 --amplions mitoAmplicons.txt
+--logfile ${j}.log --html ${j}.html --webassets "local" ${i} > ${j}.methpat.txt
+done
+\end{verbatim}
+
+This generates a methpat.txt file which summarises the read count and DNA methylation pattern information for all amplicons/regions
+of interest listed in the amplicons file. A html file is also generated for visualisation in Firefox or Chrome browsers.
+
+\section{Visualisation}
+Once open in a browser (see Figure \ref{fig:methpat1}), there are several options that could be changed for the visualisation of the data.
+\begin{figure}[H] %  figure placement: here, top, bottom, or page
+   \centering
+   \includegraphics[scale=0.65]{methpat001.png} 
+   \caption{Methpat splash page}
+   \label{fig:methpat1}
+\end{figure}
+
+\subsection{Settings for Visualisation}
+Various settings can be changed by clicking on the show settings button (Figure \ref{fig:methpat1}). By default methpat displays each amplicon with the following defaults:
+
+\begin{figure}[H] %  figure placement: here, top, bottom, or page
+   \centering
+   \includegraphics[scale=0.65]{methpat002.png} 
+   \caption{Methpat settings page}
+   \label{fig:methpat2}
+\end{figure}
+
+\begin{itemize}
+\item{Scaling, Linear}
+\item{cell size, 15px}
+\item{scale pattern intensity, false}
+\item{methylation site direction, ascending}
+\item{sort by, epiallele}
+\item{sort direction, descending}
+\item{methylated colour, yellow}
+\item{unmethylated colour, red}
+\item{unknown colour, blue}
+\item{histogram visibility, true}
+\item{histogram height, 100px}
+\item{histogram units, absolute}
+\item{histogram colour, grey}
+\end{itemize}
+
+scaling can be set either as linear or logarithmic (Figure \ref{fig:methpat2}).
+
+\subsubsection{cell size (pixels)}
+Define the size of the cells depicting CpG sites. 
+
+\subsubsection{scale pattern intensity}
+true or false, add alpha layer over the cells to represent read count abundance.
+
+\subsubsection{methylation site direction}
+ascending or descending, not sure what this is meant to do, only changes plots when sort by is changed to degree of methylation.
+
+\subsubsection{sort by}
+epiallele frequency or degree of methylation. 
+
+Epiallele or read frequency for each DNA methylation pattern. Or sort by the degree of DNA methylation across each pattern.
+
+\subsubsection{sort direction}
+ascending or descending.
+
+\subsubsection{methylated}
+Colour selection, in HEX code for Firefox.
+
+\subsubsection{unmethylated}
+Colour selection, in HEX code for Firefox.
+
+\subsubsection{unknown}
+Colour selection, in HEX code for Firefox.
+
+\subsubsection{visible}
+true or false, display histogram or not.
+
+\subsubsection{height (pixels)}
+height of histogram.
+
+\subsubsection{units}
+absolute or percent.
+
+absolute read count or percentage of total reads.
+
+\subsubsection{colour}
+Colour selection, in HEX code for Firefox.
+
+\end{document}
